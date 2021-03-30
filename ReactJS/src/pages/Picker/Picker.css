@@ -1,0 +1,20 @@
+.date {
+  font-size: 30px;
+  font-weight: 300;
+}
+
+.reset {
+  width: 100px;
+  height: 30px;
+  border-radius: 15px;
+  border: none;
+  display: none;
+  outline: none;
+  color: #fff;
+  background-color: #2466fb;
+  box-shadow: 0 1px 10px -2px #2466fb;
+  font-weight: 300;
+}
+.reset:active {
+  transform: scale(0.95);
+}
