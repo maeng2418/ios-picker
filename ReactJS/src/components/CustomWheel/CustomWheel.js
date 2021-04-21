@@ -1,53 +1,64 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useState, useEffect } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import "./CustomWheel.css";
 
-const CustomWheel = ({ selected, onDateChange, type, data }) => {
-  const [position, setPosition] = useState(-(selected - 1) * 50);
-  const [dragging, setDragging] = useState(false);
-  const [previousY, setPreviousY] = useState(0);
+const CustomWheel = ({ selected, data, type, onDateChange }) => {
+  const [position, setPosition] = useState(selected ? -(selected - 1) * 50 : 0);
+  const positionRef = useRef(selected ? -(selected - 1) * 50 : 0);
   const [offset, setOffset] = useState(0);
-  const [clientY, setClientY] = useState(0);
+  const offsetRef = useRef(0);
+  const draggingRef = useRef(false);
+  const previousYRef = useRef(0);
 
   useEffect(() => {
-    if (!dragging && position !== -(selected - 1) * 50) {
+    if (!draggingRef.current && position !== -(selected - 1) * 50) {
       setPosition(-(selected - 1) * 50);
     }
   }, [selected, position]);
 
-  useEffect(() => {
-    setOffset(clientY - previousY);
-    setPreviousY(clientY);
-    let maxPosition = -data.length * 50;
-    let pos = position + offset;
-    setPosition(Math.max(maxPosition, Math.min(50, pos)));
-  }, [clientY]);
-
   const onMouseDown = (event) => {
-    let clientY = event.touches ? event.touches[0].clientY : event.clientY;
-    setPreviousY(clientY);
-    setDragging(true);
+    previousYRef.current = event.touches
+      ? event.touches[0].clientY
+      : event.clientY;
+    draggingRef.current = true;
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    document.addEventListener("touchmove", onMouseMove);
+    document.addEventListener("touchend", onMouseUp);
   };
 
   const onMouseMove = (event) => {
     let clientY = event.touches ? event.touches[0].clientY : event.clientY;
-    setClientY(clientY);
+
+    offsetRef.current = clientY - previousYRef.current;
+    setOffset(offsetRef.current);
+    let maxPosition = -data.length * 50;
+    let pos = positionRef.current + offsetRef.current;
+    positionRef.current = Math.max(maxPosition, Math.min(50, pos));
+    setPosition(positionRef.current);
+    previousYRef.current = event.touches
+      ? event.touches[0].clientY
+      : event.clientY;
   };
 
   const onMouseUp = () => {
+    // calculate closeset snap
     let maxPosition = -(data.length - 1) * 50;
-    let rounderPosition = Math.round((position + offset * 5) / 50) * 50;
+    let rounderPosition =
+      Math.round((positionRef.current + offsetRef.current * 5) / 50) * 50;
     let finalPosition = Math.max(maxPosition, Math.min(0, rounderPosition));
 
-    setDragging(false);
+    draggingRef.current = false;
+    positionRef.current = finalPosition;
     setPosition(finalPosition);
-    onDateChange(type, -finalPosition / 50);
-  };
 
-  const inlineStyle = {
-    willChange: "transform",
-    transition: `transform ${Math.abs(offset) / 100 + 0.1}s`,
-    transform: `translateY(${position}px)`,
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
+    document.removeEventListener("touchmove", onMouseMove);
+    document.removeEventListener("touchend", onMouseUp);
+
+    onDateChange(type, -finalPosition / 50);
   };
 
   return (
@@ -55,14 +66,17 @@ const CustomWheel = ({ selected, onDateChange, type, data }) => {
       className="dragdealer year"
       onMouseDown={onMouseDown}
       onTouchStart={onMouseDown}
-      onTouchMove={onMouseMove}
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
-      onTouchEnd={onMouseUp}
     >
-      <ul className="handle" style={inlineStyle}>
-        {data.map((item, idx) => (
-          <li key={idx}>{item}</li>
+      <ul
+        className="handle"
+        style={{
+          willChange: "transform",
+          transition: `transform ${Math.abs(offset) / 100 + 0.1}s`,
+          transform: `translateY(${position}px)`,
+        }}
+      >
+        {data.map((year) => (
+          <li key={year}>{year}</li>
         ))}
       </ul>
     </div>
